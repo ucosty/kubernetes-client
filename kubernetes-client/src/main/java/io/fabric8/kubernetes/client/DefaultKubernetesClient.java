@@ -20,6 +20,7 @@ import io.fabric8.kubernetes.api.model.ComponentStatus;
 import io.fabric8.kubernetes.api.model.ComponentStatusList;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapList;
+import io.fabric8.kubernetes.api.model.Doneable;
 import io.fabric8.kubernetes.api.model.DoneableComponentStatus;
 import io.fabric8.kubernetes.api.model.DoneableConfigMap;
 import io.fabric8.kubernetes.api.model.DoneableEndpoints;
@@ -83,6 +84,7 @@ import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
 import io.fabric8.kubernetes.client.dsl.internal.ComponentStatusOperationsImpl;
 import io.fabric8.kubernetes.client.dsl.internal.ConfigMapOperationsImpl;
 import io.fabric8.kubernetes.client.dsl.internal.CustomResourceDefinitionOperationsImpl;
+import io.fabric8.kubernetes.client.dsl.internal.CustomResourceOperationsImpl;
 import io.fabric8.kubernetes.client.dsl.internal.EndpointsOperationsImpl;
 import io.fabric8.kubernetes.client.dsl.internal.EventOperationsImpl;
 import io.fabric8.kubernetes.client.dsl.internal.KubernetesListOperationsImpl;
@@ -264,6 +266,10 @@ public class DefaultKubernetesClient extends BaseClient implements NamespacedKub
     return new CustomResourceDefinitionOperationsImpl(httpClient, getConfiguration());
   }
 
+  @Override
+  public <T extends HasMetadata, L extends KubernetesResourceList, D extends Doneable<T>> MixedOperation<T, L, D, Resource<T, D>> customResource(CustomResourceDefinition crd, Class<T> resourceType, Class<L> listClass, Class<D> doneClass) {
+    return new CustomResourceOperationsImpl<T,L,D>(httpClient, getConfiguration(), crd, resourceType, listClass, doneClass);
+  }
 
   @Override
   public NamespacedKubernetesClient inNamespace(String namespace)
