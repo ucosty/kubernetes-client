@@ -21,7 +21,6 @@ import io.fabric8.kubernetes.api.builder.TypedVisitor;
 import io.fabric8.kubernetes.api.model.KubernetesResourceList;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.client.KubernetesClientTimeoutException;
-import io.fabric8.kubernetes.client.internal.SerializationUtils;
 import io.fabric8.kubernetes.client.internal.readiness.Readiness;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import okhttp3.OkHttpClient;
@@ -40,8 +39,6 @@ import io.fabric8.kubernetes.client.dsl.base.OperationSupport;
 import io.fabric8.kubernetes.client.handlers.KubernetesListHandler;
 import io.fabric8.kubernetes.client.utils.ResourceCompare;
 import io.fabric8.kubernetes.client.utils.Utils;
-import io.fabric8.openshift.api.model.Parameter;
-import io.fabric8.openshift.api.model.Template;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -331,13 +328,6 @@ Waitable<List<HasMetadata>>, Readiable {
     List<HasMetadata> result = new ArrayList<>();
     if (item instanceof KubernetesList) {
       result.addAll(((KubernetesList) item).getItems());
-    } else if (item instanceof Template) {
-
-      if (!enableProccessing) {
-        result.addAll(((Template) item).getObjects());
-      } else {
-        result.addAll(processTemplate((Template)item, false));
-      }
     } else if (item instanceof KubernetesResourceList) {
       result.addAll(((KubernetesResourceList) item).getItems());
     } else if (item instanceof HasMetadata) {
@@ -366,43 +356,6 @@ Waitable<List<HasMetadata>>, Readiable {
     }  else {
       throw new IllegalArgumentException("Could not find a registered handler for item: [" + item + "].");
     }
-  }
-
-  private static List<HasMetadata> processTemplate(Template template, Boolean failOnMissing)  {
-    List<Parameter> parameters = template != null ? template.getParameters() : null;
-    KubernetesList list = new KubernetesListBuilder()
-      .withItems(template.getObjects())
-      .build();
-
-    try {
-      String json = OBJECT_MAPPER.writeValueAsString(list);
-      if (parameters != null && !parameters.isEmpty()) {
-        // lets make a few passes in case there's expressions in values
-        for (int i = 0; i < 5; i++) {
-          for (Parameter parameter : parameters) {
-            String name = parameter.getName();
-            String regex = "${" + name + "}";
-            String value;
-            if (Utils.isNotNullOrEmpty(parameter.getValue())) {
-              value = parameter.getValue();
-            } else if (EXPRESSION.equals(parameter.getGenerate())) {
-              Generex generex = new Generex(parameter.getFrom());
-              value = generex.random();
-            } else if (failOnMissing) {
-              throw new IllegalArgumentException("No value available for parameter name: " + name);
-            } else {
-              value = "";
-            }
-            json = json.replace(regex, value);
-          }
-        }
-      }
-
-      list = OBJECT_MAPPER.readValue(json, KubernetesList.class);
-    } catch (IOException e) {
-      throw KubernetesClientException.launderThrowable(e);
-    }
-    return list.getItems();
   }
 
   /**

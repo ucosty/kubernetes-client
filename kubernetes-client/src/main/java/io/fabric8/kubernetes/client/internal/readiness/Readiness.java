@@ -35,9 +35,6 @@ import io.fabric8.kubernetes.api.model.extensions.StatefulSet;
 import io.fabric8.kubernetes.api.model.extensions.StatefulSetSpec;
 import io.fabric8.kubernetes.api.model.extensions.StatefulSetStatus;
 import io.fabric8.kubernetes.client.utils.Utils;
-import io.fabric8.openshift.api.model.DeploymentConfig;
-import io.fabric8.openshift.api.model.DeploymentConfigSpec;
-import io.fabric8.openshift.api.model.DeploymentConfigStatus;
 
 public class Readiness {
 
@@ -50,7 +47,6 @@ public class Readiness {
     return (item instanceof Deployment) ||
       (item instanceof ReplicaSet) ||
       (item instanceof Pod) ||
-      (item instanceof DeploymentConfig) ||
       (item instanceof ReplicationController) ||
       (item instanceof Endpoints) ||
       (item instanceof Node);
@@ -63,8 +59,6 @@ public class Readiness {
       return isReplicaSetReady((ReplicaSet) item);
     } else if (item instanceof Pod) {
       return isPodReady((Pod) item);
-    } else if (item instanceof DeploymentConfig) {
-      return isDeploymentConfigReady((DeploymentConfig) item);
     } else if (item instanceof ReplicationController) {
       return isReplicationControllerReady((ReplicationController) item);
     } else if (item instanceof Endpoints) {
@@ -129,25 +123,6 @@ public class Readiness {
       return false;
     }
     return spec.getReplicas().intValue() == status.getReadyReplicas();
-  }
-
-
-  public static boolean isDeploymentConfigReady(DeploymentConfig d) {
-    Utils.checkNotNull(d, "Deployment can't be null.");
-    DeploymentConfigSpec spec = d.getSpec();
-    DeploymentConfigStatus status = d.getStatus();
-
-    if (status == null || status.getReplicas() == null || status.getAvailableReplicas() == null) {
-      return false;
-    }
-
-    //Can be true in testing, so handle it to make test writing easier.
-    if (spec == null || spec.getReplicas() == null) {
-      return false;
-    }
-
-    return spec.getReplicas().intValue() == status.getReplicas() &&
-      spec.getReplicas().intValue() <= status.getAvailableReplicas();
   }
 
   public static boolean isReplicationControllerReady(ReplicationController r) {
